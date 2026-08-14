@@ -1,0 +1,23 @@
+# Keil MDK 编译产物
+MDK-ARM/FOCProjectF407/
+MDK-ARM/RTE/
+MDK-ARM/DebugConfig/
+*.o
+*.d
+*.crf
+*.lst
+*.lnp
+*.axf
+*.hex
+*.htm
+*.dep
+*.bak
+*.iex
+*.uvguix.*
+
+# Keil 本地调试配置(重新打开工程会自动生成)
+*.uvoptx
+
+# 本地工具生成的目录
+.embeddedskills/
+.zcode/
