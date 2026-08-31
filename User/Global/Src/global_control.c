@@ -73,14 +73,26 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
     Target_Set();                              //电位器给定目标值
     Motor_System_Run();                        //电机系统运行
     
-//    /* ============ 软件死区补偿（只在标定完成后、真正驱动时补）============ */
-//    if(MC.Sample.CalibEndFlag == 1)
-//    {
-//        if(MC.Sample.IuReal >= 0) MC.Foc.DutyCycleA += DT_COMP_TICKS; else MC.Foc.DutyCycleA -= DT_COMP_TICKS;
-//        if(MC.Sample.IvReal >= 0) MC.Foc.DutyCycleB += DT_COMP_TICKS; else MC.Foc.DutyCycleB -= DT_COMP_TICKS;
-//        if(MC.Sample.IwReal >= 0) MC.Foc.DutyCycleC += DT_COMP_TICKS; else MC.Foc.DutyCycleC -= DT_COMP_TICKS;
-//    }
-//    /* ================================================================ */
+    /* ============ 死区补偿 ============ */
+    if(MC.Sample.CalibEndFlag == 1 && 
+       MC.Motor.RunState != MOTOR_STOP && 
+       MC.Motor.RunState != MOTOR_ERROR &&
+       MC.Motor.RunState != MOTOR_IDENTIFY)
+    {
+        // 计算三相电流极性和补偿量
+        Deadtime_Comp_Calculate(&MC.Dtc,
+                                MC.Sample.IuReal,
+                                MC.Sample.IvReal,
+                                MC.Sample.IwReal);
+
+        // 应用补偿到占空比
+        Deadtime_Comp_Apply(&MC.Dtc,
+                            &MC.Foc.DutyCycleA,
+                            &MC.Foc.DutyCycleB,
+                            &MC.Foc.DutyCycleC,
+                            PWM_CYCLE);
+    }
+    /* ================================== */
     
     __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,MC.Foc.DutyCycleA);     //更新PWM比较值
     __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_2,MC.Foc.DutyCycleB);     //更新PWM比较值

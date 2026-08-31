@@ -1,4 +1,4 @@
-﻿#include "motor_system.h"
+#include "motor_system.h"
 #include "motor_publicdata.h"
 #include "motor_sensorless.h"
 #include "motor_identify.h"
@@ -7,6 +7,8 @@
 void Motor_System_Init(void)
 {
     Motor_Struct_Init();                       //结构体参数初始化
+    // DT_COMP_TICKS 为基础补偿tick数，0.05A为过零滞环阈值
+    Deadtime_Comp_Init(&MC.Dtc, DT_COMP_TICKS, 0.05f);
 }
 
 void Motor_System_Run(void)

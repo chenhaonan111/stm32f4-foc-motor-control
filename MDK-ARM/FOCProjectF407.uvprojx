@@ -960,6 +960,11 @@
               <FileType>1</FileType>
               <FilePath>..\User\MotorControl\Src\observer_drv.c</FilePath>
             </File>
+            <File>
+              <FileName>deadtime_comp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\MotorControl\Src\deadtime_comp.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

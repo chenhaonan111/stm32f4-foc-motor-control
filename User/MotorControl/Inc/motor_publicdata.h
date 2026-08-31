@@ -10,6 +10,7 @@
 #include "motor_identify.h"
 #include "position_drv.h"
 #include "observer_drv.h"
+#include "deadtime_comp.h"
 
 #define LOW_RESITOR        1.0f     //母线电压检测下端电阻(KΩ)
 #define HIGH_RESITOR       24.0f    //母线电压检测上端电阻(KΩ)
@@ -36,8 +37,6 @@
 #define BUS_VOLTAGE_MIN    13.0f    //最小供电电压(V)  小于这个值报错停机
 #define BUS_VOLTAGE_MAX    59.0f    //最大供电电压(V)  大于这个值报错停机
 
-#define DT_COMP_TICKS      15.0f    //死区补偿
-
 #define ENCODER_LINE 1000            //编码器线数
 #define PUL_MAX (4*ENCODER_LINE -1)  //单圈脉冲最大值
 #define PUL_MAX_HALF (PUL_MAX / 2)
@@ -48,6 +47,11 @@
 #define HALF_PI  1.5707963f
 #define ONE_PI   3.1415926f
 #define TWO_PI   6.2831853f
+
+#define DT_COMP_TIME_NS    297.6f   // 死区补偿时间，单位 ns
+#define TIM1_TICK_NS       5.952f   // TIM1 计数 tick 时间，单位 ns
+#define DT_COMP_TICKS      (DT_COMP_TIME_NS / TIM1_TICK_NS)  // 约 50.0f
+#define DT_COMP_GAIN_DEFAULT  0.4f
 
 /****************有感运行模式*******************/
 #define ENCODER_CALIB                       0X00  // 编码器校准
@@ -105,6 +109,7 @@ typedef struct
     SMO_STRUCT                        SMO;
     PLL_STRUCT                        SPLL;
     STRONG_DRAG_TO_OBSERVER           StrongDragToObs;
+    DEADTIME_COMP_STRUCT              Dtc;
 } MOTORCONTROL_STRUCT;
 
 extern MOTORCONTROL_STRUCT MC;
