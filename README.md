@@ -1,18 +1,19 @@
 # STM32F407 FOC Brushless Motor Control / STM32F407 无刷电机磁场定向控制
 
-A field-oriented control (FOC) firmware for PMSM/BLDC motors on STM32F407, supporting both **sensored (encoder)** and **sensorless** (strong-drag startup + SMO back-EMF observer + PLL) operation with current / speed / position cascaded loops.
+A field-oriented control (FOC) firmware for PMSM/BLDC motors on STM32F407, supporting both **sensored** (encoder + angle-tracking PLL) and **sensorless** (strong-drag startup + SMO back-EMF observer + PLL) operation with current / speed / position cascaded loops, plus per-phase dead-time compensation.
 
-基于 STM32F407 的 PMSM/BLDC 磁场定向控制(FOC)固件,支持**有感(编码器)**与**无感(强拖启动 + SMO 反电势观测器 + 锁相环)**两种方式,包含电流 / 速度 / 位置三环级联控制。
+基于 STM32F407 的 PMSM/BLDC 磁场定向控制(FOC)固件,支持**有感(编码器 + 角度跟踪 PLL)**与**无感(强拖启动 + SMO 反电势观测器 + 锁相环)**两种方式,包含电流 / 速度 / 位置三环级联控制,并带三相死区补偿。
 
 ---
 
 ## 功能特性 / Features
 
 - **FOC 全链路**:Clark / Park / 反 Park 变换、SVPWM(含过调制处理)、双轴电流 PID(带 LPF、抗积分饱和)。
-- **有感控制**:基于 TIM3 增量式编码器,实现电流环、速度环、位置环(三环级联)。
+- **有感控制**:基于 TIM3 增量式编码器 + 角度跟踪 PLL,实现电流环、速度环、位置环(三环级联);速度反馈采用 PLL 估计速度 + 一阶 EMA 低通(fc≈32 Hz)。
 - **无感控制**:
   - **SMO 滑模观测器**:αβ 轴电流预测 + 饱和函数切换 + 反电势低通滤波,SPLL 锁相环提取电角度与转速,适用于中高速。
   - **强拖启动**:开环/闭环强拖将电机拉至观测器可工作转速,角度与速度收敛后平滑切入闭环,含失步检测与自动回退。
+- **死区补偿**:按三相电流极性(±0.05 A 滞环判别)独立补偿死区电压(≈297.6 ns ≈ 50 ticks,增益 0.4),零点标定完成后在 PWM 占空比写入路径自动生效。
 - **保护机制**:母线过压 / 欠压、相电流过流检测,故障态软件关断驱动使能(SD)。
 - **参数在线辨识**:上电自动辨识定子电阻 Rs、电感 Ls,转子对齐(90°→0°)+ 编码器方向检测 + 零点标定。
 - **调试**:USART1 + DMA 经 VOFA+(JUST_FLOAT 协议)实时上传观测波形。
@@ -27,7 +28,7 @@ A field-oriented control (FOC) firmware for PMSM/BLDC motors on STM32F407, suppo
 
 ## 运行模式 / Run Modes
 
-通过 `MC.Motor.RunMode` 选择运行模式(默认:`0x07` 强拖切 SMO 速度电流闭环)。
+通过 `MC.Motor.RunMode` 选择运行模式(默认:`0x03` 速度电流闭环,有感;参数辨识完成后保持有感运行)。
 
 | 模式 | 代码 | 类型 | 说明 |
 |------|------|------|------|
@@ -72,6 +73,12 @@ A field-oriented control (FOC) firmware for PMSM/BLDC motors on STM32F407, suppo
 
 > 电流采样:20 mΩ 采样电阻 + 6 倍放大;母线分压 1K / 24K。相关宏定义集中在 `User/MotorControl/Inc/motor_publicdata.h` 顶部,换电机时按需修改。
 
+## 有感控制方案 / Sensored Scheme
+
+- **角度**:编码器直读机械角(含零点偏移标定)→ PLL 角度跟踪(Tustin 离散 PI,Kp=650 / Ki=210000,ζ≈0.707 @20 kHz);`USE_ENCODER_PLL=1` 时 Park 变换采用 PLL 输出角,消除编码器量化毛刺。
+- **速度**:PLL 估计速度 + 一阶 EMA 后置低通(α=0.01 @20 kHz,fc≈32 Hz);`USE_ENCODER_PLL_SPEED=1` 时作为速度环反馈,替代原差分 + EMA 链。
+- **预留**:`filter_drv` 二阶巴特沃斯低通滤波模块(实测滞后过大,暂未启用)。
+
 ## 无感控制方案 / Sensorless Scheme
 
 - **启动**:开环强拖(I-F),强拖电流按转速区间自适应调节。
@@ -103,18 +110,17 @@ FOCProjectF407/
 
 ## 调试 / Debug
 
-上位机使用 [VOFA+](https://www.vofa.plus),串口接收 JUST_FLOAT 协议数据(2 Mbps),可实时观察:
+上位机使用 [VOFA+](https://www.vofa.plus),串口接收 JUST_FLOAT 协议数据(2 Mbps),可实时观察速度环整定过程:
 
 | 通道 | 内容 |
 |------|------|
-| ch1 | 编码器电角度(真实位置) |
-| ch2 | SMO-PLL 观测电角度 |
-| ch3 | PLL 鉴相误差 |
-| ch4 | 开闭环状态(0=强拖开环,1=观测器闭环) |
+| ch1 | 速度环给定 SpdPid.Ref |
+| ch2 | 速度环反馈 SpdPid.Fbk(PLL + EMA) |
+| ch3 | q 轴电流给定 IqPid.Ref |
+| ch4 | U 相电流采样 IuReal |
 
 ## 状态 / Status
 
-有感各模式与无感(强拖 + SMO)模式均已调通。
+有感(编码器 + PLL 角度跟踪与速度滤波)与无感(强拖 + SMO)各模式均已调通。
 
-> 备注:高频注入(HFI)零速方案曾在本电机上评估——实测该电机凸极性仅在深饱和大电流注入下出现,解调无可用负序位置信号,经典方波注入不适用,相关代码已移除。如后续有零速无感需求,建议编码器方案或旋转注入类方法。
 <img width="886" height="1175" alt="屏幕截图 2026-05-22 205004" src="https://github.com/user-attachments/assets/bc3b0b16-eaa0-4760-b07b-c4d686963fd1" />
