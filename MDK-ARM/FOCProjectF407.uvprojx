@@ -965,6 +965,16 @@
               <FileType>1</FileType>
               <FilePath>..\User\MotorControl\Src\deadtime_comp.c</FilePath>
             </File>
+            <File>
+              <FileName>pll_drv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\MotorControl\Src\pll_drv.c</FilePath>
+            </File>
+            <File>
+              <FileName>filter_drv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\MotorControl\Src\filter_drv.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

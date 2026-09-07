@@ -41,6 +41,17 @@
 #define PUL_MAX (4*ENCODER_LINE -1)  //单圈脉冲最大值
 #define PUL_MAX_HALF (PUL_MAX / 2)
 
+/*编码器PLL输出接管开关
+  USE_ENCODER_PLL:      电角度接管。1=Park变换等用PLL估计角(平滑)，0=原直读角
+  USE_ENCODER_PLL_SPEED:速度环反馈接管。1=SpdPid.Fbk用PLL速度+一阶EMA(≈32Hz)，
+                        0=原差分+EMA速度。两档反馈滞后相当，速度环参数可共用。
+  ★整定铁律（违反即自激振荡/卡顿，详见motor_publicdata.c速度环注释）：
+    1) Kp与Ki必须同比例调整，保持Kp/Ki=2500；
+    2) KpMin暂等于KpMax（不分段），恢复分段时跳变≤2倍；
+    3) 提高速度环带宽前先确认：交叉频率≤EMA带宽(≈32Hz)的1/3。*/
+#define USE_ENCODER_PLL        1
+#define USE_ENCODER_PLL_SPEED  1
+
 #define SPEED_DIVISION_FACTOR  2     //速度环分频系数
 #define POS_DIVISION_FACTOR    4     //位置环分频系数
 

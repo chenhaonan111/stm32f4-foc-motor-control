@@ -2,6 +2,8 @@
 #define __EANGLE_DRV_H__
 
 #include "main.h"
+#include "pll_drv.h"
+#include "filter_drv.h"
 
 typedef struct
 {
@@ -16,9 +18,16 @@ typedef struct
     float      ElectricalAnglePU;          // 编码器电角度标幺值
     float      ElectricalAngleSpdSet;      // 给定的电角速度        
     float      ElectricalAngleSetPU;       // 给定电角度标幺值
-}E_ANGLE_STRUCT; 
+
+    ENC_PLL_STRUCT EncPll;                 // 编码器PLL（角度跟踪锁相环）实例
+    float      SpeedEmaAlpha;              // PLL速度输出的一阶低通系数（后向欧拉EMA，α≈2π·fc·TS，fc≈32Hz）
+    float      ElectricalAngleRawPU;       // 原始直读电角度标幺值（A/B对比用）
+    float      ThetaMechRad;               // PLL输入机械角度（rad，调试观察用）
+    float      EncSpeedElecRPM;            // PLL速度输出（电角度rpm，与速度环单位一致）
+}E_ANGLE_STRUCT;
 
 void Electrical_Angle_Generator(E_ANGLE_STRUCT *p);
 void Calculate_Encoder_Data(E_ANGLE_STRUCT *p);
+void Calculate_Encoder_Pll(E_ANGLE_STRUCT *p);
 
 #endif

@@ -1,4 +1,5 @@
-﻿#include "math_drv.h"
+#include "math_drv.h"
+#include "motor_publicdata.h"
 
 // 正弦/余弦表：0° ~ 90° 范围内1024个点的正弦值（浮点数）
 const float Sin_Cos_Table[1024] = {
@@ -153,5 +154,23 @@ void Amplitude_Limit(float *input, float min, float max)
     {
         *input = max;
     }
+}
+
+// 取模到 [0, 2π)
+float Value_normalize(float angle)
+{
+    while (1)
+    {
+        if (angle > TWO_PI)       angle -= TWO_PI;   // 你工程已有 TWO_PI 宏
+        else if (angle < 0.0f)    angle += TWO_PI;
+        else break;
+    }
+    return angle;
+}
+// 把两个 [0,2π) 角度之差修正到 [-π, π)，单次修正即可
+void Value_Correct(float *angle, float error)
+{
+    if (error >= ONE_PI)  *angle -= TWO_PI;
+    if (error <= -ONE_PI) *angle += TWO_PI;
 }
 

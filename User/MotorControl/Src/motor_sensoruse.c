@@ -203,7 +203,11 @@ void Speed_Current_Loop(void)
 
         /* 3.3 设置速度环PID的参考值和反馈值 */
         MC.SpdPid.Ref = MC.TAccDec.SpeedOut;                  // 目标速度（来自T型加减速输出）
+#if USE_ENCODER_PLL_SPEED
+        MC.SpdPid.Fbk = MC.EAngle.EncSpeedElecRPM;            // 反馈速度（PLL估计电角速度）
+#else
         MC.SpdPid.Fbk = MC.Speed.ElectricalSpeedLPF;         // 反馈速度（滤波后的电角速度）
+#endif
         if(MC.SpdPid.Fbk > -2000 && MC.SpdPid.Fbk < 2000)    // 低速大Kp,高速小Kp
         {
             MC.SpdPid.Kp = MC.SpdPid.KpMax;
@@ -346,7 +350,11 @@ void Pos_Speed_Current_Loop()
 
         /* 2.3 设置速度环PID的参考值和反馈值 */
         MC.SpdPid.Ref = MC.PosPid.Out;                               // 目标速度来自位置环的输出
+#if USE_ENCODER_PLL_SPEED
+        MC.SpdPid.Fbk = MC.EAngle.EncSpeedElecRPM;                  // 反馈速度（PLL估计电角速度）
+#else
         MC.SpdPid.Fbk = MC.Speed.ElectricalSpeedLPF;                 // 反馈速度（滤波后的电角速度）
+#endif
                 if(MC.SpdPid.Fbk > -2000 && MC.SpdPid.Fbk < 2000) 
                 {
                     MC.SpdPid.Kp = MC.SpdPid.KpMax;

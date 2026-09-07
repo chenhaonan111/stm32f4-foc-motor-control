@@ -36,11 +36,14 @@ void Usart_Task(void)
         {
             if (__HAL_DMA_GET_COUNTER(&hdma_usart1_tx) == 0)
             {
-                    TxData.fdata[0] = MC.EAngle.ElectricalAnglePU;         // ch1 编码器电角度(真实位置)
-                    TxData.fdata[1] = MC.SPLL.EThetaPU;                    // ch2 SPLL观测电角度(看是否锁定跟踪)
-                    TxData.fdata[2] = MC.SPLL.ThetaErr;                    // ch3 SPLL鉴相误差
-                    TxData.fdata[3] = (float)MC.StrongDragToObs.GeneralMode; // ch4 开闭环状态(0=开环强拖,1=观测器闭环)
-                
+                /* 速度环整定观测（VOFA+ 4通道）：
+                   CH1 速度给定(电rpm)  CH2 速度反馈(电rpm)——看阻尼/振荡直接用它
+                   CH3 Iq给定(A)        CH4 U相实测电流(A) */
+                TxData.fdata[0] = MC.SpdPid.Ref;
+                TxData.fdata[1] = MC.SpdPid.Fbk;
+                TxData.fdata[2] = MC.IqPid.Ref;
+                TxData.fdata[3] = MC.Sample.IuReal;
+
                 HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&TxData, sizeof(TxData));//发送结构体(不用对float做处理了)
             }
             UsartTaskId = 10;

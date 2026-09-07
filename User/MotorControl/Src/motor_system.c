@@ -66,10 +66,10 @@ void Motor_System_Run(void)
                 // 将辨识结果赋值给滑模观测器（用于无感控制）
                 MC.SMO.Rs = MC.Identify.Rs;          // 定子电阻
                 MC.SMO.Ld = MC.Identify.Ld;          // 直轴电感（假设 Ld = Lq）
-                // 若无故障，则切换至无感控制模式
+                // 若无故障，则切换至有感控制模式
                 if (MC.Motor.RunState != MOTOR_ERROR)
                 {
-                    MC.Motor.RunState = MOTOR_SENSORLESS;
+                    MC.Motor.RunState = MOTOR_SENSORUSE;
                 }
             }
         }
@@ -79,6 +79,7 @@ void Motor_System_Run(void)
         case MOTOR_SENSORUSE:
         {
             Calculate_Encoder_Data(&MC.EAngle);    // 读取编码器并计算电角度、速度
+            Calculate_Encoder_Pll(&MC.EAngle);     // 编码器PLL：角度跟踪与速度估计（需在上一行之后）
             Sensoruse_Control();                    // 执行有感 FOC 控制（电流环/速度环/位置环）
         }
         break;

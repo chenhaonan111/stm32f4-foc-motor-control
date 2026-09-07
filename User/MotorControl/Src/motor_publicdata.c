@@ -12,7 +12,7 @@ void Motor_Struct_Init(void)
     // ErrorCode: 故障代码，初始无错误
     MC.Motor.ErrorCode = NONE_ERR;
     // RunMode: 强拖+滑模观测器速度电流闭环(无感)
-    MC.Motor.RunMode = STRONG_DRAG_SMO_SPEED_CURRENT_LOOP;
+    MC.Motor.RunMode = SPEED_CURRENT_LOOP;
     
     // ============================================================================
     // 2. 采样参数（电流、电压）
@@ -27,7 +27,8 @@ void Motor_Struct_Init(void)
     MC.Sample.BusFactor = VBUS_FACTOR;
     
     // ============================================================================
-    // 3. 编码器与电角度参数
+    // 3. 编码器与电角度参数，编码器PLL（角度跟踪锁相环）参数，20kHz，参数直接平移：
+    //     ωn=√Ki≈458rad/s(约73Hz)，ζ=Kp/(2√Ki)≈0.707（临界阻尼整定）
     // ============================================================================
     // PolePairs: 电机极对数（永磁体磁极对数 = 磁钢数量/2）
     MC.EAngle.PolePairs = POLEPAIRS;
@@ -35,7 +36,16 @@ void Motor_Struct_Init(void)
     MC.EAngle.EncoderValMax = PUL_MAX;
     // Ts: 控制周期（秒），用于角度积分和观测器时间基准
     MC.EAngle.Ts = TS;
-    
+
+    MC.EAngle.EncPll.T  = TS;
+    MC.EAngle.EncPll.Kp = 650.0f;
+    MC.EAngle.EncPll.Ki = 210000.0f;
+    ENC_PLL_Init(&MC.EAngle.EncPll);      // is_position_mode 默认0（非位置环模式）
+
+    // PLL速度输出后置低通（一阶EMA，后向欧拉）：α=0.01@20kHz → fc≈32Hz，
+    // 与原"差分+EMA"速度链同带宽，反馈滞后不恶化（16Hz二阶巴特沃斯滞后过大，已弃用）
+    MC.EAngle.SpeedEmaAlpha = 0.01f;
+
     // ============================================================================
     // 4. FOC（磁场定向控制）参数
     // ============================================================================
@@ -148,10 +158,16 @@ void Motor_Struct_Init(void)
     // ============================================================================
     // 15. 速度环PID参数（带分段限制）
     // ============================================================================
+    /*速度环整定铁律（2026-09排查结论）：
+      1) Kp与Ki必须同比例调整，保持Kp/Ki=2500（PI零点4rad/s≈0.64Hz压在交叉频率之下），
+         否则零点升到交叉频率上方，环路退化成双积分器+滤波滞后，欠阻尼爬行(卡顿/不收敛)；
+      2) 分段Kp暂取消（KpMin=KpMax）：原5倍跳变在500机械rpm处诱发极限环，恢复时跳变≤2倍；
+      3) 反馈链=PLL速度+一阶EMA(≈32Hz)，与原差分+EMA链滞后相当，Kp可在0.001~0.002间调，
+         提带宽前先确认交叉频率≤EMA带宽的1/3*/
     MC.SpdPid.Kp = 0.001f;                  // 默认比例系数
-    MC.SpdPid.KpMax = 0.005f;               // 比例系数最大值（用于变速调参）
-    MC.SpdPid.KpMin = 0.001f;               // 比例系数最小值
-    MC.SpdPid.Ki = 0.000002f;               // 积分系数
+    MC.SpdPid.KpMax = 0.001f;               // 比例系数最大值（低速段）
+    MC.SpdPid.KpMin = 0.001f;               // 比例系数最小值（高速段，暂不分段）
+    MC.SpdPid.Ki = 0.0000004f;              // 积分系数（4e-7，保持Kp/Ki=2500）
     MC.SpdPid.OutMax = 6.75;                   // 输出上限（对应Iq电流参考值，安培）
     MC.SpdPid.OutMin = -6.75;                  // 输出下限
 
