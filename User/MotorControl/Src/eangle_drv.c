@@ -72,24 +72,24 @@ void Calculate_Encoder_Pll(E_ANGLE_STRUCT *p)
 
     /* 2. 误差计算 */
     /* Error 归一到 [-π, π)，避免角度过零时的 2π 跳变冲击 PLL */
-    /* 注意：Error/OutRe 是 EncPll.go 子结构的成员，访问路径必须带 .go */
-    p->EncPll.go.Error = theta_m - p->EncPll.go.OutRe;
+    /* 注意：Error/OutThetaM 是 EncPll.go 子结构的成员，访问路径必须带 .go */
+    p->EncPll.go.Error = theta_m - p->EncPll.go.OutThetaM;
     Value_Correct(&p->EncPll.go.Error, p->EncPll.go.Error);
 
     /* 3. PLL 运算（20kHz 每控制周期执行，不要放进速度环分频里！） */
     ENC_PLL_Loop(&p->EncPll);
 
-    /* 4. 速度输出：OutWe(机械rad/s) → 一阶EMA(≈32Hz) → 换算电角度 rpm */
+    /* 4. 速度输出：OutWm(机械rad/s) → 一阶EMA(≈32Hz) → 换算电角度 rpm */
     /* 速度分支过滤波压量化毛刺，角度分支不滤保持快速跟踪 */
     {
-        float rpm_raw = p->EncPll.go.OutWe * (60.0f / TWO_PI) * p->PolePairs;
+        float rpm_raw = p->EncPll.go.OutWm * (60.0f / TWO_PI) * p->PolePairs;
         p->EncSpeedElecRPM += p->SpeedEmaAlpha * (rpm_raw - p->EncSpeedElecRPM);
     }
 
 #if USE_ENCODER_PLL
     /* 5. PLL 接管电角度：下游 Park 变换/测速差分/位置累计自动生效 */
-    /* 与原算法数学等价：frac(OutRe*PP/(2π))；原始值保留在 ElectricalAngleRawPU */
-    p->ElectricalAnglePU = Value_normalize(p->EncPll.go.OutRe * p->PolePairs) / TWO_PI;
+    /* 与原算法数学等价：frac(OutThetaM*PP/(2π))；原始值保留在 ElectricalAngleRawPU */
+    p->ElectricalAnglePU = Value_normalize(p->EncPll.go.OutThetaM * p->PolePairs) / TWO_PI;
 #endif
 }
 
